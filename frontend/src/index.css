@@ -211,10 +211,10 @@ body {
 .clinical-tag {
   color: var(--primary);
   font-size: 13px;
-  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   margin-bottom: 12px;
+  font-weight: 700;
 }
 
 .hero-text-block h1 {
@@ -735,8 +735,8 @@ body {
 .history-list-element {
   list-style: none;
   overflow-y: auto;
-  flex: 1;
   padding-right: 4px;
+  flex: 1;
 }
 
 .empty-ledger-notice {
@@ -888,4 +888,50 @@ body {
   
   .abcde-grid { grid-template-columns: 1fr; }
   .footer-content { flex-direction: column; gap: 10px; text-align: center; }
+}
+
+/* Custom formatting fixes for text-only layout alignment */
+.full-width-hero {
+  grid-template-columns: 1fr !important;
+  max-width: 800px;
+  margin: 0 auto 40px auto;
+  text-align: center;
+}
+.full-width-hero .hero-button-group {
+  justify-content: center;
+}
+
+.clinical-avatar-fallback {
+  font-size: 18px;
+  padding: 4px;
+  background-color: var(--border-subtle);
+  border-radius: 50%;
+}
+
+.file-selected-box {
+  padding: 20px;
+  background-color: var(--primary-subtle);
+  border-radius: var(--radius-sm);
+}
+.file-selected-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+.file-name-display {
+  font-size: 13px;
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+.file-metadata-tag {
+  margin-top: 10px;
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--text-muted);
+  background-color: var(--border-subtle);
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-block;
 }
