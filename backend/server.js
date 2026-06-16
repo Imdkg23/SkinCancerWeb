@@ -156,7 +156,7 @@ app.post('/api/predict', authenticateToken, upload.single('file'), async (req, r
             await patient.save();
         }
 
-        const response = await fetch('http://localhost:5001/predict', {
+        const response = await fetch('https://imdkg-skin-cancer-inference.hf.space', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_path: absoluteImagePath })
@@ -236,27 +236,5 @@ app.delete('/api/history', authenticateToken, async (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Node.js Active full-stack API server serving on port ${PORT}`);
-    
-    const pythonPath = "C:\\Users\\dkg21\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
-    const scriptPath = path.join(__dirname, 'predict_server.py');
-    
-    console.log(`[System Link] Launching background ML service via Python 3.11...`);
-    const pythonProcess = spawn(pythonPath, [scriptPath]);
-    
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(`\x1b[36m%s\x1b[0m`, `[Python Sidecar]: ${data.toString().trim()}`);
-    });
-    
-    pythonProcess.stderr.on('data', (data) => {
-        const message = data.toString().trim();
-        if (!message.includes('WARNING') && !message.includes('UserWarning')) {
-            console.error(`\x1b[31m%s\x1b[0m`, `[Python Log/Stderr]: ${message}`);
-        }
-    });
-
-    process.on('SIGINT', () => {
-        console.log('\nShutting down full-stack processes cleanly...');
-        pythonProcess.kill();
-        process.exit();
-    });
+    console.log(`AI inference is now handled remotely via Hugging Face.`);
 });
