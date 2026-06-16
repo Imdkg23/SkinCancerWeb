@@ -5,7 +5,7 @@ import EducationView from './pages/EducationView';
 import LoginView from './pages/LoginView';
 import DashboardView from './pages/DashboardView';
 
-const API_URL = 'https://skincancerweb.onrender.com';
+const API_URL = 'http://localhost:5000/api';
 const GOOGLE_CLIENT_ID = '834381178930-sjeutp47at4qkfim5rnba1qsim5udoss.apps.googleusercontent.com';
 
 export default function App() {

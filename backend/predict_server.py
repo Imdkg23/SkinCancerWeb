@@ -13,7 +13,7 @@ app = FastAPI(
 )
 
 # 🧠 CRITICAL: Load your TensorFlow neural network layers into RAM ONCE during boot setup
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'SkinCancerApp\backend\skin_cancer_efficientnet.keras')
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'skin_cancer_efficientnet.keras')
 print("[STARTUP] Loading TensorFlow model layers into RAM... Please wait.")
 model = tf.keras.models.load_model(MODEL_PATH)
 print("[STARTUP] Model loaded successfully! Listening for instant predictions on port 5001.")

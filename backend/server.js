@@ -4,7 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { spawn } = require('child_process'); // Built-in utility to spawn background sub-services
+const { spawn } = require('child_process'); // RESTORED: To boot local Python
 const { OAuth2Client } = require('google-auth-library');
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ require('dotenv').config();
 const app = express();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Middleware Configuration
+// Local CORS
 app.use(express.json());
 app.use(cors({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -28,7 +28,7 @@ if (!fs.existsSync('uploads')) {
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Successfully connected to persistent MongoDB Instance.'))
+    .then(() => console.log('Successfully connected to local MongoDB.'))
     .catch(err => console.error('MongoDB database initialization failure:', err));
 
 // Database Schemas
@@ -98,7 +98,6 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Added back: Secure landing verification route for Google Identity Tokens
 app.post('/api/auth/google', async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: 'Google ticket payload missing.' });
@@ -139,7 +138,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// IMAGE PROCESSING & INFERENCE ROUTING PIPELINE
+// IMAGE PROCESSING (LOCAL PYTHON SIDECAR)
 // -----------------------------------------------------------------------------
 app.post('/api/predict', authenticateToken, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image file uploaded.' });
@@ -156,7 +155,8 @@ app.post('/api/predict', authenticateToken, upload.single('file'), async (req, r
             await patient.save();
         }
 
-        const response = await fetch('https://imdkg-skin-cancer-inference.hf.space', {
+        // RESTORED: Calling your local python script at Port 5001
+        const response = await fetch('http://localhost:5001/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_path: absoluteImagePath })
@@ -184,7 +184,8 @@ app.post('/api/predict', authenticateToken, upload.single('file'), async (req, r
 
     } catch (err) {
         if (fs.existsSync(localImagePath)) fs.unlinkSync(localImagePath);
-        res.status(500).json({ error: 'Could not communicate with the background ML script server. Make sure the child process started successfully.' });
+        console.error("Prediction Error:", err);
+        res.status(500).json({ error: 'Could not communicate with the local Python ML server. Is it running?' });
     }
 });
 
@@ -200,34 +201,23 @@ app.get('/api/history', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 🗑️ ENDPOINT 1: Purge an individual evaluation log item by its unique ID
 app.delete('/api/history/:id', authenticateToken, async (req, res) => {
     try {
         const scan = await Scan.findById(req.params.id).populate('patientId');
         if (!scan) return res.status(404).json({ error: 'Target clinical record not found.' });
-        
-        if (scan.patientId.doctorId.toString() !== req.user.id) {
-            return res.status(403).json({ error: 'Unauthorized access allocation to update this history file.' });
-        }
-
+        if (scan.patientId.doctorId.toString() !== req.user.id) return res.status(403).json({ error: 'Unauthorized access.' });
         await Scan.findByIdAndDelete(req.params.id);
-        res.json({ success: true, message: 'Record deleted from database successfully.' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 🗑️ ENDPOINT 2: Purge ALL evaluation log entries attached to this practitioner's account
 app.delete('/api/history', authenticateToken, async (req, res) => {
     try {
         const patients = await Patient.find({ doctorId: req.user.id });
         const patientIds = patients.map(p => p._id);
-
         await Scan.deleteMany({ patientId: { $in: patientIds } });
-        res.json({ success: true, message: 'All record tracking fields wiped clean.' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // -----------------------------------------------------------------------------
@@ -236,5 +226,28 @@ app.delete('/api/history', authenticateToken, async (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Node.js Active full-stack API server serving on port ${PORT}`);
-    console.log(`AI inference is now handled remotely via Hugging Face.`);
+    
+    // RESTORED: Booting up the local Python script using your specific path
+    const pythonPath = "C:\\Users\\dkg21\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
+    const scriptPath = path.join(__dirname, 'predict_server.py');
+    
+    console.log(`[System Link] Launching background ML service via Python 3.11...`);
+    const pythonProcess = spawn(pythonPath, [scriptPath]);
+    
+    pythonProcess.stdout.on('data', (data) => {
+        console.log(`\x1b[36m%s\x1b[0m`, `[Python Sidecar]: ${data.toString().trim()}`);
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+        const message = data.toString().trim();
+        if (!message.includes('WARNING') && !message.includes('UserWarning')) {
+            console.error(`\x1b[31m%s\x1b[0m`, `[Python Log/Stderr]: ${message}`);
+        }
+    });
+
+    process.on('SIGINT', () => {
+        console.log('\nShutting down full-stack processes cleanly...');
+        pythonProcess.kill();
+        process.exit();
+    });
 });
